@@ -23,8 +23,12 @@ class Lexer:
 
 
 def lexer():
-    for line in sys.stdin:
-        if not line:
-            yield None
-        for rt in line.split():
-            yield get_token(rt)
+    buf = sys.stdin.buffer.read()
+    for c in buf:
+        if c == 0:
+            print("EOF")
+        print(c, chr(c))
+
+
+if __name__ == "__main__":
+    lexer()
