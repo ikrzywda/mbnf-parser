@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List
 
 from tokens import MBNF_Token
+from pydantic import BaseModel
 
 
 class NodeType(Enum):
@@ -10,14 +11,11 @@ class NodeType(Enum):
     ASSIGN = 2
     GROUP = 3
     COPY = 4
-    MBNF_Token = 5
+    VALUE = 5
+    CONCATENATION = 6
 
 
-class AST:
-    def __init__(
-        self,
-        node_type: NodeType,
-        value: List["AST"] | List[MBNF_Token] | "AST" | MBNF_Token,
-    ):
-        self.node_type = node_type
-        self.value = value
+class AST(BaseModel):
+    node_type: NodeType
+    value: MBNF_Token
+    children: List["AST"]

@@ -1,34 +1,42 @@
-from typing import List
-from tokens import MBNF_Token, MBNF_TokenType
 import sys
-import re
+from tokens import MBNF_TokenType, SINGLETON_TOKEN_SET, MBNF_Token
 
 
-def get_token(in_str: str) -> MBNF_Token:
-    token_type: MBNF_TokenType | None = None
-    value: str | None = None
+def getc():
+    buffer = sys.stdin.buffer.read()
+    for c in buffer:
+        yield chr(c)
 
 
-class Lexer:
-    current_line_MBNF_Tokens: List[str]
+def get_string_token(it):
+    token_buffer = ""
 
-    def get_next_MBNF_Token(self):
-        if not self.current_line_MBNF_Tokens:
-            raw_input = sys.stdin.readline()
-            if not raw_input:
-                return None
-            self.current_line_MBNF_Tokens = raw_input.split(" ")
-
-        return get_token(self.current_line_MBNF_Tokens.pop(0))
+    for c in it:
+        if not c.isalnum():
+            break
+        token_buffer += c
+    return token_buffer
 
 
-def lexer():
-    buf = sys.stdin.buffer.read()
-    for c in buf:
-        if c == 0:
-            print("EOF")
-        print(c, chr(c))
+def get_next_token():
+    gc = getc()
+    for c in gc:
+        if c in SINGLETON_TOKEN_SET:
+            yield MBNF_Token(token_type=MBNF_TokenType(c), value=c)
+        elif c == '"':
+            yield MBNF_Token(
+                token_type=MBNF_TokenType.TERMINAL, value=get_string_token(gc)
+            )
+        elif c.isalnum():
+            value = c + get_string_token(gc)
+            yield MBNF_Token(
+                token_type=MBNF_TokenType.NONTERMINAL,
+                value=value,
+            )
+        elif not c:
+            raise Exception("Syntax error")
 
 
 if __name__ == "__main__":
-    lexer()
+    for tok in get_next_token():
+        print(tok)

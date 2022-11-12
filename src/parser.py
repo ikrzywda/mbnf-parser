@@ -1,42 +1,45 @@
-import sys
-from tokens import MBNF_TokenType, SINGLETON_TOKEN_SET, MBNF_Token
+from lexer import get_next_token
+from tokens import MBNF_Token, MBNF_TokenType
+from syntax_tree import AST, NodeType
 
 
-def getc():
-    buffer = sys.stdin.buffer.read()
-    for c in buffer:
-        yield chr(c)
+def expr(token_generator: get_next_token):
+    root = AST()
+    current_token = next(token_generator)
+    if not current_token and current_token.token_type is not MBNF_TokenType.NONTERMINAL:
+        raise Exception("Syntax error: assignment can only be done on nonterminal")
+    root.children.append(AST(node_type=NodeType.VALUE, value=current_token))
+    current_token = next(token_generator)
+
+    if not current_token and current_token.token_type is not MBNF_TokenType.OP_ASSIGN:
+        raise Exception("Syntax error: assignment expression must contain '='")
+    root.node_type = NodeType.ASSIGN
+    root.value = current_token
+
+    root.children.append(definition(token_generator))
 
 
-def get_string_token(it):
-    token_buffer = ""
+def definition(token_generator):
+    root = AST()
+    current_token = next(token_generator)
 
-    for c in it:
-        if not c.isalnum():
-            break
-        token_buffer += c
-    return token_buffer
+    root.children.push(AST(node_type=NodeType.VALUE, value=current_token))
 
+    current_token = next(token_generator)
 
-def get_next_token():
-    gc = getc()
-    for c in gc:
-        if c in SINGLETON_TOKEN_SET:
-            yield MBNF_Token(token_type=MBNF_TokenType(c), value=c)
-        elif c == '"':
-            yield MBNF_Token(
-                token_type=MBNF_TokenType.TERMINAL, value=get_string_token(gc)
-            )
-        elif c.isalnum():
-            value = c + get_string_token(gc)
-            yield MBNF_Token(
-                token_type=MBNF_TokenType.NONTERMINAL,
-                value=value,
-            )
-        elif not c:
-            raise Exception("Syntax error")
+    match current_token.dict():
+        case MBNF_Token(
+            token_type=MBNF_TokenType.NONTERMINAL, value=value
+        ) | MBNF_Token(token_type=MBNF_TokenType.NONTERMINAL, value=value) as terminal:
+            root.node_type = NodeType.CONCATENATION
+            root.children.append(AST(node_type=NodeType.VALUE, value=terminal))
+        case MBNF_Token(token_type=MBNF_TokenType.END_OF_EXPR, value=value) as token:
+            return root
 
 
-if __name__ == "__main__":
-    for tok in get_next_token():
-        print(tok)
+def mult_node():
+    pass
+
+
+def singleton_node():
+    pass
