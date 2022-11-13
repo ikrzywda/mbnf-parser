@@ -18,7 +18,7 @@ def get_string_token(it):
     return token_buffer
 
 
-def get_next_token():
+def get_next_token(get_backtrack=False, backtrack=False):
     gc = getc()
     for c in gc:
         if c in SINGLETON_TOKEN_SET:
@@ -28,10 +28,9 @@ def get_next_token():
                 token_type=MBNF_TokenType.TERMINAL, value=get_string_token(gc)
             )
         elif c.isalnum():
-            value = c + get_string_token(gc)
             yield MBNF_Token(
                 token_type=MBNF_TokenType.NONTERMINAL,
-                value=value,
+                value=c + get_string_token(gc),
             )
         elif not c:
             raise Exception("Syntax error")

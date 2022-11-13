@@ -16,6 +16,6 @@ class NodeType(Enum):
 
 
 class AST(BaseModel):
-    node_type: NodeType
-    value: MBNF_Token
-    children: List["AST"]
+    node_type: NodeType | None
+    value: MBNF_Token | None
+    children: List["AST"] = []
