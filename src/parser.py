@@ -1,97 +1,94 @@
 from lexer import get_next_token
-from tokens import MBNF_Token, MBNF_TokenType
+from tokens import MBNF_TokenType, get_closing_token
 from syntax_tree import AST, NodeType
-import itertools
+import json
+from typing import Generator, List
 
 
-def expr(token_generator: get_next_token):
-    root = AST()
-    current_token = next(token_generator)
-    if not current_token and current_token.token_type is not MBNF_TokenType.NONTERMINAL:
-        raise Exception("Syntax error: assignment can only be done on nonterminal")
-    root.children.append(AST(node_type=NodeType.VALUE, value=current_token))
-    current_token = next(token_generator)
-
-    if not current_token and current_token.token_type is not MBNF_TokenType.OP_ASSIGN:
-        raise Exception("Syntax error: assignment expression must contain '='")
-    root.node_type = NodeType.ASSIGN
-    root.value = current_token
-
-    root.children.append(term(token_generator))
-
-    current_token = next(token_generator)
-    if not current_token and current_token.token_type is not MBNF_TokenType.END_OF_EXPR:
-        raise Exception("Syntax error: expected '.'")
-
-    return root
+class UnexpectedTokenException(Exception):
+    def __init__(self, token):
+        self.message = f"Unexpected token {token}"
 
 
-def term(token_generator: get_next_token):
-    current_token = next(token_generator)
+class Parser:
+    def __init__(self, token_generator: Generator):
+        self.token_generator = token_generator
+        self.current_token = next(token_generator)
 
-    match current_token.token_type:
-        case MBNF_TokenType.OPTION_OPEN | MBNF_TokenType.DUPLICATION_OPEN | MBNF_TokenType.GROUP_OPEN:
-            return grouping(token_generator, current_token)  # list
-        case MBNF_TokenType.NONTERMINAL | MBNF_TokenType.TERMINAL:
-            return binop(token_generator)
-        case _:
-            raise Exception(f"Syntax error: unexpected token {current_token}")
+    def eat(self, token_type: MBNF_TokenType):
+        if self.current_token.token_type != token_type:
+            raise UnexpectedTokenException(self.current_token)
+        self.current_token = next(self.token_generator)
 
+    def definition(self):
+        root = AST(node_type=NodeType.ASSIGN)
+        root.children.append(self.factor())
 
-def factor(token_generator: get_next_token):
-    current_token = next(token_generator)
+        self.eat(MBNF_TokenType.OP_ASSIGN)
 
-    if (
-        current_token.token_type == MBNF_TokenType.NONTERMINAL
-        or current_token.token_type == MBNF_TokenType.TERMINAL
-    ):
-        return AST(node_type=NodeType.VALUE, value=current_token)
+        root.children.append(self.expr())
+        return root
 
-    raise Exception(f"Syntax error: unexpected token {current_token}")
+    def expr(self):
+        match self.current_token.token_type:
+            case MBNF_TokenType.TERMINAL | MBNF_TokenType.NONTERMINAL:
+                return self.term()
+            case MBNF_TokenType.OPTION_OPEN | MBNF_TokenType.GROUP_OPEN | MBNF_TokenType.DUPLICATION_OPEN:
+                return self.grouping()
+            case MBNF_TokenType.END_OF_EXPR:
+                return None
+            case _:
+                raise UnexpectedTokenException(self.current_token)
 
+    def grouping(self):
+        root = AST()
+        terminating_op = get_closing_token(self.current_token.token_type)
+        if not terminating_op:
+            raise UnexpectedTokenException(self.current_token)
 
-def binop(token_generator):
-    root = AST()
+        print(self.current_token)
+        self.eat(self.current_token.token_type)
+        print(self.current_token)
 
-    root.children.append(factor(token_generator))
+        root.children.append(self.expr())
 
-    current_token = next(token_generator)
+        self.eat(terminating_op)
+        return root
 
-    if current_token.token_type == MBNF_TokenType.OP_ALTERNATIVE:
-        root.node_type = NodeType.ALTERNATIVE
-    elif (
-        current_token.token_type == MBNF_TokenType.TERMINAL
-        or current_token.token_type == MBNF_TokenType.NONTERMINAL
-    ):
-        root.node_type = NodeType.CONCATENATION
+    def term(self):
+        root = AST()
+        root.children.append(self.factor())
+        print("TERM-0", self.current_token)
 
-    root.children.append(term(token_generator))
-    return root
+        if self.current_token.token_type == MBNF_TokenType.OP_ALTERNATIVE:
+            self.node_type = NodeType.ALTERNATIVE
+            self.eat(self.current_token.token_type)
+        elif (
+            self.current_token.token_type == MBNF_TokenType.TERMINAL
+            or self.current_token.token_type == MBNF_TokenType.NONTERMINAL
+        ):
+            root.node_type = NodeType.CONCATENATION
+        root.children.append(self.factor())
+        print("TERM", self.current_token)
+        return root
 
+    def factor(self):
+        if (
+            self.current_token.token_type == MBNF_TokenType.NONTERMINAL
+            or self.current_token.token_type == MBNF_TokenType.TERMINAL
+        ):
+            node = AST(node_type=NodeType.VALUE, value=self.current_token)
+            self.eat(token_type=self.current_token.token_type)
+            print("FACTOR", self.current_token)
+            return node
 
-def grouping(token_generator, start_token):
-    root = AST()
-    termination_token_type = None
-    current_token = None
-
-    match start_token.token_type:
-        case MBNF_TokenType.OPTION_OPEN:
-            root.node_type = NodeType.OPTION
-            termination_token_type = MBNF_TokenType.OPTION_CLOSE
-        case MBNF_TokenType.DUPLICATION_OPEN:
-            root.node_type = NodeType.COPY
-            termination_token_type = MBNF_TokenType.DUPLICATION_CLOSE
-        case MBNF_TokenType.GROUP_OPEN:
-            termination_token_type = MBNF_TokenType.GROUP_CLOSE
-            root.node_type = NodeType.GROUP
-
-    current_token = next(token_generator)
-    while current_token.token_type != termination_token_type:
-        itertools.chain([current_token], token_generator)
-        root.children.append(term(token_generator))
-    return root
+        return self.expr()
 
 
 if __name__ == "__main__":
     gen = get_next_token()
-    print(expr(gen))
+    for t in gen:
+        print(t)
+    # parser = Parser(get_next_token())
+
+    # print(json.dumps(json.loads(parser.definition().json()), indent=4))
