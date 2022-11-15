@@ -1,8 +1,9 @@
-from lexer import get_next_token
-from tokens import MBNF_TokenType, get_closing_token
-from syntax_tree import AST, NodeType
 import json
 from typing import Generator
+
+from lexer import get_next_token
+from syntax_tree import AST, NodeType
+from tokens import MBNF_TokenType, get_closing_token
 
 
 class UnexpectedTokenException(Exception):
