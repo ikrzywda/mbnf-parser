@@ -2,7 +2,7 @@ from lexer import get_next_token
 from tokens import MBNF_TokenType, get_closing_token
 from syntax_tree import AST, NodeType
 import json
-from typing import Generator, List
+from typing import Generator
 
 
 class UnexpectedTokenException(Exception):
@@ -20,13 +20,18 @@ class Parser:
             raise UnexpectedTokenException(self.current_token)
         self.current_token = next(self.token_generator)
 
+    def expr_generator(self):
+        while self.current_token.token_type != MBNF_TokenType.END_OF_EXPR:
+            yield self.term()
+
     def definition(self):
         root = AST(node_type=NodeType.ASSIGN)
         root.children.append(self.factor())
 
         self.eat(MBNF_TokenType.OP_ASSIGN)
 
-        root.children.append(self.expr())
+        root.children = [node for node in self.expr_generator()]
+
         return root
 
     def expr(self):
@@ -46,9 +51,7 @@ class Parser:
         if not terminating_op:
             raise UnexpectedTokenException(self.current_token)
 
-        print(self.current_token)
         self.eat(self.current_token.token_type)
-        print(self.current_token)
 
         root.children.append(self.expr())
 
@@ -79,16 +82,12 @@ class Parser:
         ):
             node = AST(node_type=NodeType.VALUE, value=self.current_token)
             self.eat(token_type=self.current_token.token_type)
-            print("FACTOR", self.current_token)
             return node
 
         return self.expr()
 
 
 if __name__ == "__main__":
-    gen = get_next_token()
-    for t in gen:
-        print(t)
-    # parser = Parser(get_next_token())
+    parser = Parser(get_next_token())
 
-    # print(json.dumps(json.loads(parser.definition().json()), indent=4))
+    print(json.dumps(json.loads(parser.definition().json()), indent=4))
