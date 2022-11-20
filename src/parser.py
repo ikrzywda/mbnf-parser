@@ -2,7 +2,8 @@ from typing import Generator, Dict
 
 from lexer import get_next_token
 from syntax_tree import AST, NodeType
-from tokens import MBNF_TokenType, get_closing_token
+from tokens import MBNF_TokenType
+from rich import print
 
 
 class UnexpectedTokenException(Exception):
@@ -53,9 +54,19 @@ class Parser:
 
     def grouping(self):
         root = AST()
-        terminating_op = get_closing_token(self.current_token.token_type)
-        if not terminating_op:
-            raise UnexpectedTokenException(self.current_token)
+
+        match self.current_token.token_type:
+            case MBNF_TokenType.GROUP_OPEN:
+                root.node_type = NodeType.GROUP
+                terminating_op = MBNF_TokenType.GROUP_CLOSE
+            case MBNF_TokenType.OPTION_OPEN:
+                root.node_type = NodeType.OPTION
+                terminating_op = MBNF_TokenType.OPTION_CLOSE
+            case MBNF_TokenType.DUPLICATION_OPEN:
+                root.node_type = NodeType.COPY
+                terminating_op = MBNF_TokenType.DUPLICATION_CLOSE
+            case _:
+                raise UnexpectedTokenException(self.current_token)
 
         self.eat(self.current_token.token_type)
 
@@ -66,7 +77,12 @@ class Parser:
 
     def term(self):
         root = AST()
-        root.children.append(self.factor())
+        term_l = self.factor()
+
+        if self.current_token.token_type == MBNF_TokenType.END_OF_EXPR:
+            return term_l
+
+        root.children.append(term_l)
 
         if self.current_token.token_type == MBNF_TokenType.OP_ALTERNATIVE:
             root.node_type = NodeType.ALTERNATIVE
@@ -94,5 +110,4 @@ class Parser:
 if __name__ == "__main__":
     parser = Parser(get_next_token())
     parser.definition()
-    # roots = [r for r in parser.definition()]
     print(parser.symbol_table)

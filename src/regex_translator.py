@@ -28,23 +28,31 @@ class RegexTranslator:
                 return self.alternative(root)
             case NodeType.VALUE:
                 return self.value(root)
+            case NodeType.COPY:
+                return self.copy(root)
+            case NodeType.GROUP:
+                return self.grouping(root)
+            case NodeType.OPTION:
+                return self.option(root)
 
     def alternative(self, root: AST):
         expr_l = self.expression(root.children[0])
         expr_r = self.expression(root.children[1])
         return f"{expr_l}|{expr_r}"
 
-    def option():
-        pass
+    def option(self, root: AST):
+        return f"({self.expression(root.children[0])})?"
 
-    def grouping():
-        pass
+    def grouping(self, root: AST):
+        return f"({self.expression(root.children[0])})"
 
-    def copy():
-        pass
+    def copy(self, root: AST):
+        return f"({self.expression(root.children[0])})*"
 
-    def concatenation():
-        pass
+    def concatenation(self, root: AST):
+        expr_l = self.expression(root.children[0])
+        expr_r = self.expression(root.children[1])
+        return expr_l + expr_r
 
     def value(self, root: AST):
         token_value = root.value.value

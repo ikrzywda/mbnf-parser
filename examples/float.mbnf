@@ -1,3 +1,4 @@
+test = { a | c } .
+
 float = a | "b" .
-a = "dupa" | "dd" .
 c = "ah" | "ha" .
