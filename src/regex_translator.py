@@ -14,10 +14,11 @@ class RegexTranslator:
         for key, value in self.input_symbol_table.items():
             if self.output_symbol_table.get(key):
                 pass
-            self.output_symbol_table[key] = self.expression(value.children[0])
+            self.output_symbol_table[key] = self.expression(value)
 
     def assign(self, key: str):
-        output = self.input_symbol_table[key].children[0]
+        root = self.input_symbol_table[key]
+        output = self.expression(root)
         self.output_symbol_table[key] = output
         return output
 
@@ -51,9 +52,7 @@ class RegexTranslator:
             return token_value
         if self.output_symbol_table.get(token_value):
             return self.output_symbol_table[token_value]
-        output_value = self.expression(self.input_symbol_table[token_value].children[0])
-        self.output_symbol_table[token_value] = output_value
-        return output_value
+        return self.assign(token_value)
 
 
 if __name__ == "__main__":
