@@ -1,5 +1,5 @@
 import json
-from typing import Generator
+from typing import Generator, Dict
 
 from lexer import get_next_token
 from syntax_tree import AST, NodeType
@@ -15,25 +15,36 @@ class Parser:
     def __init__(self, token_generator: Generator):
         self.token_generator = token_generator
         self.current_token = next(token_generator)
+        self.symbol_table: Dict[str, AST] = {}
 
     def eat(self, token_type: MBNF_TokenType):
         if self.current_token.token_type != token_type:
             raise UnexpectedTokenException(self.current_token)
-        self.current_token = next(self.token_generator)
+        try:
+            self.current_token = next(self.token_generator)
+        except StopIteration:
+            self.current_token = None
 
     def expr_generator(self):
         while self.current_token.token_type != MBNF_TokenType.END_OF_EXPR:
             yield self.term()
 
     def definition(self):
-        root = AST(node_type=NodeType.ASSIGN)
-        root.children.append(self.factor())
+        while self.current_token is not None:
+            root = AST(node_type=NodeType.ASSIGN)
+            symbol_token = self.factor()
 
-        self.eat(MBNF_TokenType.OP_ASSIGN)
+            if self.symbol_table.get(symbol_token.value.value):
+                raise "Duplicate"
 
-        root.children = [node for node in self.expr_generator()]
+            root.children.append(symbol_token)
 
-        return root
+            self.eat(MBNF_TokenType.OP_ASSIGN)
+
+            root.children = [node for node in self.expr_generator()]
+            self.eat(MBNF_TokenType.END_OF_EXPR)
+
+            self.symbol_table[symbol_token.value.value] = root
 
     def expr(self):
         match self.current_token.token_type:
@@ -62,7 +73,6 @@ class Parser:
     def term(self):
         root = AST()
         root.children.append(self.factor())
-        print("TERM-0", self.current_token)
 
         if self.current_token.token_type == MBNF_TokenType.OP_ALTERNATIVE:
             self.node_type = NodeType.ALTERNATIVE
@@ -73,7 +83,6 @@ class Parser:
         ):
             root.node_type = NodeType.CONCATENATION
         root.children.append(self.factor())
-        print("TERM", self.current_token)
         return root
 
     def factor(self):
@@ -90,5 +99,6 @@ class Parser:
 
 if __name__ == "__main__":
     parser = Parser(get_next_token())
-
-    print(json.dumps(json.loads(parser.definition().json()), indent=4))
+    parser.definition()
+    # roots = [r for r in parser.definition()]
+    print(parser.symbol_table)

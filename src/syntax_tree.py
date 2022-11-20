@@ -3,7 +3,6 @@ from typing import List
 
 from tokens import MBNF_Token
 from pydantic import BaseModel
-import json
 
 
 class NodeType(Enum):
