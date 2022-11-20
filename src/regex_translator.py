@@ -16,6 +16,11 @@ class RegexTranslator:
                 pass
             self.output_symbol_table[key] = self.expression(value.children[0])
 
+    def assign(self, key: str):
+        output = self.input_symbol_table[key].children[0]
+        self.output_symbol_table[key] = output
+        return output
+
     def expression(self, root: AST):
         match root.node_type:
             case NodeType.ALTERNATIVE:
@@ -46,7 +51,7 @@ class RegexTranslator:
             return token_value
         if self.output_symbol_table.get(token_value):
             return self.output_symbol_table[token_value]
-        output_value = self.expression(self.input_symbol_table[token_value])
+        output_value = self.expression(self.input_symbol_table[token_value].children[0])
         self.output_symbol_table[token_value] = output_value
         return output_value
 

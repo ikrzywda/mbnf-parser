@@ -1,1 +1,3 @@
-float = "a" | "b" .
+float = a | "b" .
+a = "dupa" | "dd" .
+c = "ah" | "ha" .
