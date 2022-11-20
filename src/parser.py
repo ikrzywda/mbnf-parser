@@ -1,4 +1,3 @@
-import json
 from typing import Generator, Dict
 
 from lexer import get_next_token
@@ -75,7 +74,7 @@ class Parser:
         root.children.append(self.factor())
 
         if self.current_token.token_type == MBNF_TokenType.OP_ALTERNATIVE:
-            self.node_type = NodeType.ALTERNATIVE
+            root.node_type = NodeType.ALTERNATIVE
             self.eat(self.current_token.token_type)
         elif (
             self.current_token.token_type == MBNF_TokenType.TERMINAL

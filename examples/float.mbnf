@@ -1,2 +1,1 @@
-float = [ a b ] | dupa DUPA .
-chuj = ddd .
+float = "a" | "b" .
